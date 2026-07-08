@@ -1,0 +1,239 @@
+# ==========================================================
+# 1. Deployment - RollingUpdate (Default)
+# ==========================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: httpd-deployment
+spec:
+  replicas: 5
+  selector:
+    matchLabels:
+      app: httpd
+  template:
+    metadata:
+      labels:
+        app: httpd
+    spec:
+      containers:
+        - name: httpd
+          image: httpd
+          ports:
+            - containerPort: 80
+
+---
+# ==========================================================
+# 2. Deployment - Recreate Strategy
+# ==========================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: recreate-deployment
+spec:
+  strategy:
+    type: Recreate
+  replicas: 4
+  selector:
+    matchLabels:
+      app: recreate-httpd
+  template:
+    metadata:
+      labels:
+        app: recreate-httpd
+    spec:
+      containers:
+        - name: httpd
+          image: httpd
+          ports:
+            - containerPort: 80
+
+---
+# ==========================================================
+# 3. Standalone Pod
+# ==========================================================
+apiVersion: v1
+kind: Pod
+metadata:
+  name: webserver-pod
+  labels:
+    app: webserver
+spec:
+  containers:
+    - name: httpd
+      image: httpd
+      ports:
+        - containerPort: 80
+
+---
+# ==========================================================
+# 4. NodePort Service
+# ==========================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: webserver-nodeport
+spec:
+  type: NodePort
+  selector:
+    app: webserver
+  ports:
+    - port: 80
+      targetPort: 80
+      nodePort: 30001
+
+---
+# ==========================================================
+# 5. Jenkins Pod
+# ==========================================================
+apiVersion: v1
+kind: Pod
+metadata:
+  name: jenkins-pod
+  labels:
+    app: jenkins
+spec:
+  containers:
+    - name: jenkins
+      image: jenkins/jenkins:lts
+      ports:
+        - containerPort: 8080
+
+---
+# ==========================================================
+# 6. Jenkins NodePort Service
+# ==========================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: jenkins-nodeport
+spec:
+  type: NodePort
+  selector:
+    app: jenkins
+  ports:
+    - port: 8080
+      targetPort: 8080
+      nodePort: 30002
+
+---
+# ==========================================================
+# 7. ClusterIP Demo Pods
+# ==========================================================
+apiVersion: v1
+kind: Pod
+metadata:
+  name: client-pod
+  labels:
+    role: client
+spec:
+  containers:
+    - name: httpd
+      image: httpd
+
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-pod
+  labels:
+    app: nginx
+spec:
+  containers:
+    - name: nginx
+      image: nginx
+      ports:
+        - containerPort: 80
+
+---
+# ==========================================================
+# 8. ClusterIP Service
+# ==========================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-clusterip
+spec:
+  type: ClusterIP
+  selector:
+    app: nginx
+  ports:
+    - port: 80
+      targetPort: 80
+
+---
+# ==========================================================
+# 9. LoadBalancer Deployment
+# ==========================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loadbalancer-deployment
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: lb-httpd
+  template:
+    metadata:
+      labels:
+        app: lb-httpd
+    spec:
+      containers:
+        - name: httpd
+          image: httpd
+          ports:
+            - containerPort: 80
+
+---
+# ==========================================================
+# 10. LoadBalancer Service
+# ==========================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: httpd-loadbalancer
+spec:
+  type: LoadBalancer
+  selector:
+    app: lb-httpd
+  ports:
+    - port: 80
+      targetPort: 80
+
+---
+# ==========================================================
+# 11. Labels & Selectors Demo
+# ==========================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: label-demo-deployment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      environment: demo
+  template:
+    metadata:
+      labels:
+        environment: demo
+    spec:
+      containers:
+        - name: nginx
+          image: nginx
+          ports:
+            - containerPort: 80
+
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: demo-pod
+  labels:
+    environment: demo
+spec:
+  containers:
+    - name: nginx
+      image: nginx
+      ports:
+        - containerPort: 80
