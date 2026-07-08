@@ -1,0 +1,131 @@
+# ==========================
+# Namespace: qa
+# ==========================
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: qa
+---
+# ==========================
+# Namespace: dev
+# ==========================
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: dev
+---
+# ==========================
+# Pod: myfirstpod (default namespace)
+# ==========================
+apiVersion: v1
+kind: Pod
+metadata:
+  name: myfirstpod
+spec:
+  containers:
+    - name: cont1
+      image: httpd
+      ports:
+        - containerPort: 80
+---
+# ==========================
+# Pod: mysecondpod (Multi-Container)
+# ==========================
+apiVersion: v1
+kind: Pod
+metadata:
+  name: mysecondpod
+spec:
+  containers:
+    - name: cont1
+      image: httpd
+      ports:
+        - containerPort: 80
+
+    - name: cont2
+      image: jenkins/jenkins:lts
+      ports:
+        - containerPort: 8080
+---
+# ==========================
+# Pod: mythirdpod (Multi-Container)
+# ==========================
+apiVersion: v1
+kind: Pod
+metadata:
+  name: mythirdpod
+spec:
+  containers:
+    - name: cont1
+      image: httpd
+      ports:
+        - containerPort: 80
+
+    - name: cont2
+      image: nginx
+      ports:
+        - containerPort: 80
+---
+# ==========================
+# Pod: myfirstpod in dev Namespace
+# ==========================
+apiVersion: v1
+kind: Pod
+metadata:
+  name: myfirstpod
+  namespace: dev
+spec:
+  containers:
+    - name: cont1
+      image: httpd
+      ports:
+        - containerPort: 80
+---
+# ==========================
+# ReplicaSet: my-replica
+# ==========================
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: my-replica
+spec:
+  replicas: 5
+  selector:
+    matchLabels:
+      app: httpd
+      tier: frontend
+  template:
+    metadata:
+      labels:
+        app: httpd
+        tier: frontend
+    spec:
+      containers:
+        - name: cont1
+          image: httpd
+          ports:
+            - containerPort: 80
+---
+# ==========================
+# DaemonSet: my-daemon
+# ==========================
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: my-daemon
+spec:
+  selector:
+    matchLabels:
+      app: httpd
+      tier: frontend
+  template:
+    metadata:
+      labels:
+        app: httpd
+        tier: frontend
+    spec:
+      containers:
+        - name: cont1
+          image: httpd
+          ports:
+            - containerPort: 80
