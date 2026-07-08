@@ -1,0 +1,295 @@
+# Prerequisites
+# -------------
+# Label and taint your worker nodes before applying:
+#
+# kubectl label node <general-node> node-type=general
+#
+# kubectl label node <cpu-node> node-type=high-cpu
+# kubectl taint node <cpu-node> colour=green:NoSchedule
+#
+# kubectl label node <memory-node> node-type=high-memory
+# kubectl taint node <memory-node> colour=blue:NoSchedule
+# ==========================================================
+
+
+
+
+
+
+# ==========================================================
+# 1. Basic Pod (Can run on any worker node)
+# ==========================================================
+apiVersion: v1
+kind: Pod
+metadata:
+  name: basic-nginx
+spec:
+  containers:
+    - name: nginx
+      image: nginx:latest
+      ports:
+        - containerPort: 80
+
+---
+# ==========================================================
+# 2. Pod with Required Node Affinity
+# Schedules ONLY on high-memory nodes
+# ==========================================================
+apiVersion: v1
+kind: Pod
+metadata:
+  name: required-memory-pod
+spec:
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                  - high-memory
+  containers:
+    - name: nginx
+      image: nginx
+
+---
+# ==========================================================
+# 3. Pod with Preferred Node Affinity
+# Prefers high-memory nodes
+# ==========================================================
+apiVersion: v1
+kind: Pod
+metadata:
+  name: preferred-memory-pod
+spec:
+  affinity:
+    nodeAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          preference:
+            matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                  - high-memory
+  containers:
+    - name: nginx
+      image: nginx
+
+---
+# ==========================================================
+# 4. Pod with Toleration
+# Can run on green tainted node
+# ==========================================================
+apiVersion: v1
+kind: Pod
+metadata:
+  name: cpu-intensive-pod
+spec:
+  tolerations:
+    - key: colour
+      operator: Equal
+      value: green
+      effect: NoSchedule
+
+  containers:
+    - name: nginx
+      image: nginx
+
+---
+# ==========================================================
+# 5. Deployment tolerating green taint
+# ==========================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: green-app
+spec:
+  replicas: 5
+
+  selector:
+    matchLabels:
+      app: green-app
+
+  template:
+    metadata:
+      labels:
+        app: green-app
+
+    spec:
+      tolerations:
+        - key: colour
+          operator: Equal
+          value: green
+          effect: NoSchedule
+
+      containers:
+        - name: nginx
+          image: nginx
+          ports:
+            - containerPort: 80
+
+---
+# ==========================================================
+# 6. Deployment tolerating green & blue taints
+# ==========================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: multicolour-app
+spec:
+  replicas: 8
+
+  selector:
+    matchLabels:
+      app: multicolour-app
+
+  template:
+    metadata:
+      labels:
+        app: multicolour-app
+
+    spec:
+      tolerations:
+
+        - key: colour
+          operator: Equal
+          value: green
+          effect: NoSchedule
+
+        - key: colour
+          operator: Equal
+          value: blue
+          effect: NoSchedule
+
+      containers:
+        - name: nginx
+          image: nginx
+          ports:
+            - containerPort: 80
+
+---
+# ==========================================================
+# 7. Deployment with Required Node Affinity
+# + Green Toleration
+# ==========================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: compute-app
+spec:
+  replicas: 5
+
+  selector:
+    matchLabels:
+      app: compute-app
+
+  template:
+    metadata:
+      labels:
+        app: compute-app
+
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: node-type
+                    operator: In
+                    values:
+                      - high-cpu
+
+      tolerations:
+        - key: colour
+          operator: Equal
+          value: green
+          effect: NoSchedule
+
+      containers:
+        - name: nginx
+          image: nginx
+          ports:
+            - containerPort: 80
+
+---
+# ==========================================================
+# 8. Target Pod
+# Used for Pod Affinity / Anti-Affinity
+# ==========================================================
+apiVersion: v1
+kind: Pod
+metadata:
+  name: bestfriend-pod
+  labels:
+    group: bestfriendz
+spec:
+  containers:
+    - name: nginx
+      image: nginx
+      ports:
+        - containerPort: 80
+
+---
+# ==========================================================
+# 9. Pod Affinity
+# Schedule on same node as bestfriendz Pod
+# ==========================================================
+apiVersion: v1
+kind: Pod
+metadata:
+  name: friend-httpd
+spec:
+  affinity:
+    podAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+
+        - labelSelector:
+            matchLabels:
+              group: bestfriendz
+
+          topologyKey: kubernetes.io/hostname
+
+  containers:
+    - name: httpd
+      image: httpd
+      ports:
+        - containerPort: 80
+
+---
+# ==========================================================
+# 10. Pod Anti-Affinity
+# Avoid nodes running bestfriendz Pods
+# ==========================================================
+apiVersion: v1
+kind: Pod
+metadata:
+  name: enemy-httpd
+spec:
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+
+        - labelSelector:
+            matchLabels:
+              group: bestfriendz
+
+          topologyKey: kubernetes.io/hostname
+
+  containers:
+    - name: httpd
+      image: httpd
+      ports:
+        - containerPort: 80
+
+
+
+#kubectl apply -f 09-scheduling-affinity-taints.yaml
+
+
+#kubectl get pods -o wide
+#kubectl describe pod <pod-name>
+#kubectl get nodes --show-labels
+#kubectl describe node <node-name>
+
